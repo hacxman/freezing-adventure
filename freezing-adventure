@@ -118,6 +118,12 @@ class Instr(object):
     curln += 1
     if curln & 0xff == 1:
       sys.stdout.write("%i/%i   \r" % (curln, totallns))
+
+    # test if intruction has conditional prefix
+    conditional = self.name[0] == 'c'
+    if conditional:
+      self.name = self.name[1:]
+
     if self.name == 'nop':
       if len(self.args) > 0:
         failwith("nop should have 0 args, has %s at line %i\n" % (self.args, self.line))
@@ -127,9 +133,9 @@ class Instr(object):
         failwith("mov has arity 2, not %i at line %i\n" %(len(self.args), self.line))
       if self.args[0].__class__.__name__ == Reg.__name__:
         if self.args[1].__class__.__name__ == Reg.__name__:
-          return [(self.args[0].name << 4) + 0b0010, (self.args[1].name & 0b111) << 4]
+          return [(self.args[0].name << 4) + 0b0010 + 0b10000000 * conditional, (self.args[1].name & 0b111) << 4]
         elif self.args[1].__class__.__name__ == Num.__name__:
-          return [(self.args[0].name << 4) + 0b0010, self.args[1].name]
+          return [(self.args[0].name << 4) + 0b0010 + 0b10000000 * conditional, self.args[1].name]
         else:
           failwith("2st argument of mov should be register or number, not %s at line %i\n" %(self.args[1], self.line))
       else:
@@ -140,6 +146,7 @@ class Instr(object):
       if self.args[0].__class__.__name__ == Reg.__name__:
         if self.args[1].__class__.__name__ == Addr.__name__:
           opcode = 0b0010 if self.name == 'ld' else 0b0100
+          opcode += 0b10000000 * conditional
           return [((self.args[0].name & 0b111) << 4) + opcode, self.args[1].name & 0xff]
         else:
           failwith("2st argument of ld/st should be address, not %s at line %i\n" %(self.args[1], self.line))
@@ -152,6 +159,7 @@ class Instr(object):
         if self.args[1].__class__.__name__ == Reg.__name__:
           if self.args[2].__class__.__name__ == Reg.__name__:
             opcode = {'add':0b1001, 'sub':0b1010}[self.name]
+            opcode += 0b10000000 * conditional
             return [((self.args[0].name & 0b111) << 4) + opcode, ((self.args[1].name & 0b111) << 4) + (self.args[2].name & 0b111)]
           else:
             failwith("3st argument of mov should be register, not %s at line %i\n" %(self.args[2], self.line))
