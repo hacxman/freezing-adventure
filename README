@@ -1,0 +1,4 @@
+python a.py file.asm
+
+wait for the output, compiler has 4 stages and its slow.
+enjoy
