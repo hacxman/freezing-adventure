@@ -96,7 +96,8 @@ class Instr(object):
   def get_machine_code(self):
     global curln, totallns
     curln += 1
-    sys.stdout.write("%i/%i   \r" % (curln, totallns))
+    if curln & 0xff == 1:
+      sys.stdout.write("%i/%i   \r" % (curln, totallns))
     if self.name == 'nop':
       if len(self.args) > 0:
         failwith("nop should have 0 args, has %s at line %i\n" % (self.args, self.line))
@@ -148,7 +149,8 @@ totallns = 0
 def parseline(line):
   global curln, totallns
   curln += 1
-  sys.stdout.write("%i/%i   \r" % (curln, totallns))
+  if curln & 0xff == 1:
+    sys.stdout.write("%i/%i   \r" % (curln, totallns))
   p = re.match("^(\w+):(.*)$", line)
   if p is not None:
     if len(p.groups()[1]) > 0:
@@ -191,7 +193,8 @@ def compute_addresses(ast, offset = None):
   r = []
   ln = len(ast)
   for _i, i in enumerate(ast):
-    sys.stdout.write("%i/%i   \r" % (_i, ln))
+    if _i & 0xff == 1:
+      sys.stdout.write("%i/%i   \r" % (_i, ln))
 #    print i.__class__.__name__
     if i.__class__.__name__ in [Label.__name__, Instr.__name__]:
       i.addr = addr
@@ -210,7 +213,8 @@ def resolve_referencies(ast):
   # walk ast for names
   ln = len(ast)
   for _i, i in enumerate(ast):
-    sys.stdout.write("%i/%i   \r" % (_i, ln))
+    if _i & 0xff == 1:
+      sys.stdout.write("%i/%i   \r" % (_i, ln))
 #    print i
     if i.__class__.__name__ == Instr.__name__:
 #      print 'yes,'
@@ -234,6 +238,7 @@ from operator import add, concat
 def parse(lines):
   global totallns, curln
   totallns = len(lines)
+  print 'breathe in'
   ls = dropnone(map(parseline, lines))
 #  map(lambda x: x.show(), ls)
 #  print ls
