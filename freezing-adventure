@@ -254,8 +254,7 @@ def parse(lines):
 
   return mc
 
-
-if __name__=="__main__":
+def main():
   fname = sys.argv[1]
   with open(fname) as fin:
     mc = parse(fin.readlines())
@@ -266,3 +265,5 @@ if __name__=="__main__":
   with open(sys.argv[1]+".out", "wb+") as fout:
     map(lambda x: fout.write(bytearray(x)), mc)
 
+if __name__=="__main__":
+  main()
