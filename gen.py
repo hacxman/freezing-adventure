@@ -8,8 +8,11 @@ def geni():
     l = lb[random.randrange(0, len(lb))]
     r0, r1, r2 = random.randrange(0, 8), random.randrange(0, 8), random.randrange(0, 8)
     rval = random.randrange(0, 256)
+    r2 = random.random()
 
     r = random.random()
+    if r2 < 0.3:
+      sys.stdout.write("c")
     if r < 0.1:
       print "nop"
     elif r >= 0.1 and r < 0.2:
