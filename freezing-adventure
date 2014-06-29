@@ -44,6 +44,12 @@ class Num(object):
   def __repr__(self):
     return "%i"%(self.name)
 
+class String(object):
+  def __init__(self, name):
+    self.name = str(name)
+  def __repr__(self):
+    return "%s"%(self.name)
+
 class Instr(object):
   def __init__(self, name, args):
     global curln
@@ -59,6 +65,10 @@ class Instr(object):
   def try_num(self, arg):
     if arg.isdigit():
       return Num(int(arg))
+    elif arg[0] == '0' and arg[1] == 'x':
+      return Num(int(arg, 16))
+    elif arg[0] == '0' and arg[1] == 'b':
+      return Num(int(arg, 2))
     else:
       return  None
   def try_addr(self, arg):
@@ -84,10 +94,19 @@ class Instr(object):
       return Name(arg)
     else:
       return None
+  def try_string(self, arg):
+    global curln
+    if arg[0] == '"' or arg[0] == "'":
+      if arg[0] == arg[-1]:
+        return String(arg[1:-1])
+      else:
+        failwith("misformated string '%s' at line %i\n" % (arg, curln))
+    else:
+      return None
 
   def parse_arg(self, arg):
     global curln
-    r = dropnone([self.try_num(arg), self.try_addr(arg), self.try_reg(arg), self.try_name(arg)])
+    r = dropnone([self.try_num(arg), self.try_addr(arg), self.try_reg(arg), self.try_name(arg), self.try_string(arg)])
     if not r == []:
 #      print "arg",arg, "parsed succesfully!1!"
       return r[0]
@@ -140,12 +159,51 @@ class Instr(object):
           failwith("2st argument of mov should be register, not %s at line %i\n" %(self.args[1], self.line))
       else:
         failwith("1st argument of mov should be register, not %s at line %i\n" %(self.args[0], self.line))
+    elif self.name == '.db':
+      r = []
+      for i in self.args:
+        if i.__class__.__name__ in [Addr.__name__, Num.__name__]:
+          r.append(i.name)
+        elif i.__class__.__name__ == String.__name__:
+          for c in i.name:
+            r.append(ord(c))
+        else:
+          failwith("invalid argument type %s of %s at line %i\n" % (i.__class__.__name__, i, curln))
+      return r
+
     else:
       failwith("unsupported instruction %s at line %i\n" % (self.name, self.line))
 
 
 curln = 0
 totallns = 0
+
+def get_tokens(line):
+  r = []
+  tok = ''
+  s = False
+  for i in line:
+    if i == "'" or i == '"':
+      s = True
+    if s:
+      tok += i
+
+      if len(tok) >= 2 and (tok[-1] == '"' or tok[-1] == "'") and tok[0] == tok[-1]:
+        r.append(tok)
+        s = False
+        tok = ''
+    else:
+      if i.isspace():
+        if not tok == '':
+          r.append(tok)
+          tok = ''
+        continue
+      else:
+        tok += i
+#  print r
+  return r
+
+
 
 def parseline(line):
   global curln, totallns
@@ -162,10 +220,10 @@ def parseline(line):
   else:
 
 #    p = re.match("^\s*(\w+)\s([%a-zA-Z0-9 ]*)$", line)
-    p = line.split()
+    p = get_tokens(line)
     if p == []:
       return None
-    r = re.match("^\w+$", p[0])
+    r = re.match("^[\.]{0,1}\w+$", p[0])
     if r is not None:
       return Instr(p[0], p[1:])
 #      if p.groups()
