@@ -4,6 +4,7 @@ if __name__=="__main__":
   try:
     import freezing_adventure
     freezing_adventure.main()
+    exit(0)
   except ImportError:
     pass
 
@@ -16,9 +17,9 @@ def failwith(m):
   exit(1)
 
 class Label(object):
-  def __init__(self, name):
+  def __init__(self, name, scope):
     global curln
-    self.name = name
+    self.name = name if not name[0] == '_' else scope + "_" + name
     self.addr = None
     self.line = curln
   def show(self):
@@ -29,8 +30,8 @@ class Label(object):
     return []
 
 class Name(object):
-  def __init__(self, idx):
-    self.name = str(idx)
+  def __init__(self, idx, scope):
+    self.name = str(idx) if not idx[0] == '_' else scope + "_" + str(idx)
   def __repr__(self):
     return "%s"%(self.name)
 
@@ -98,8 +99,9 @@ class Instr(object):
     else:
       return None
   def try_name(self, arg):
-    if arg[0].isalpha() and arg[1:].isalnum():
-      return Name(arg)
+    global current_scope
+    if (arg[0].isalpha() or arg[0] == '_') and arg[1:].isalnum():
+      return Name(arg, current_scope)
     else:
       return None
   def try_string(self, arg):
@@ -114,11 +116,16 @@ class Instr(object):
 
   def parse_arg(self, arg):
     global curln
-    r = dropnone([self.try_num(arg), self.try_addr(arg), self.try_reg(arg), self.try_name(arg), self.try_string(arg)])
-    if not r == []:
+    #r = dropnone([self.try_num(arg), self.try_addr(arg), self.try_reg(arg), self.try_name(arg), self.try_string(arg)])
+    parsers = [self.try_num, self.try_addr, self.try_reg, self.try_name, self.try_string]
+    for p in parsers:
+      r = p(arg)
+      if r is not None:
+        return r
+#    if not r == []:
 #      print "arg",arg, "parsed succesfully!1!"
-      return r[0]
-    else:
+#      return r[0]
+    if r is None:
       failwith("unrecognized argument type of '%s' at line %i\n" %(arg, curln))
 
   def get_machine_code(self):
@@ -150,19 +157,20 @@ class Instr(object):
         failwith("1st argument of mov should be register, not %s at line %i\n" %(self.args[0], self.line))
     elif self.name in ['ld', 'st']:
       if len(self.args) != 2:
-        failwith("ld has arity 2, not %i at line %i\n" %(len(self.args), self.line))
+        failwith("ld/st has arity 2, not %i at line %i\n" %(len(self.args), self.line))
       if self.args[0].__class__.__name__ == Reg.__name__:
         if self.args[1].__class__.__name__ == Addr.__name__:
           opcode = 0b0010 if self.name == 'ld' else 0b0100
           opcode += 0b10000000 * conditional
-          return [((self.args[0].name & 0b111) << 4) + opcode, self.args[1].name & 0xff]
+          return [((self.args[0].name & 0b111) << 4) + opcode, self.args[1].name & 0xff,
+              (self.args[1].name >> 8) & 0xff, (self.args[1].name >> 16) & 0xff]
         else:
           failwith("2st argument of ld/st should be address, not %s at line %i\n" %(self.args[1], self.line))
       else:
         failwith("1st argument of mov should be register, not %s at line %i\n" %(self.args[0], self.line))
     elif self.name in ['add', 'sub']:
       if len(self.args) != 3:
-        failwith("ld has arity 3, not %i at line %i\n" %(len(self.args), self.line))
+        failwith("add/sub has arity 3, not %i at line %i\n" %(len(self.args), self.line))
       if self.args[0].__class__.__name__ == Reg.__name__:
         if self.args[1].__class__.__name__ == Reg.__name__:
           if self.args[2].__class__.__name__ == Reg.__name__:
@@ -221,24 +229,29 @@ def get_tokens(line):
 
 
 
+current_scope = ''
 def parseline(line):
-  global curln, totallns
+  global curln, totallns, current_scope
   curln += 1
   if curln & 0xff == 1:
-    sys.stdout.write("%i/%i   \r" % (curln, totallns))
+    sys.stdout.write("%s %i/%i   \r" % (current_scope, curln, totallns))
   p = re.match("^(\w+):(.*)$", line)
   if p is not None:
     if len(p.groups()[1]) > 0:
       failwith('garbadge in label at line %i\n' % curln);
     if len(p.groups()[0]) < 1:
       failwith('label name at line %i must be at least 1 chr long\n' % curln);
-    return Label(p.groups()[0])
+    return Label(p.groups()[0], current_scope)
   else:
 
 #    p = re.match("^\s*(\w+)\s([%a-zA-Z0-9 ]*)$", line)
     p = get_tokens(line)
     if p == []:
       return None
+    elif p[0] == '.scope':
+      current_scope = p[1]
+      return None
+
     r = re.match("^[\.]{0,1}\w+$", p[0])
     if r is not None:
       return Instr(p[0], p[1:])
@@ -310,11 +323,13 @@ def _print(x):
 
 from operator import add, concat
 
+import itertools
 def parse(lines):
   global totallns, curln
   totallns = len(lines)
   print 'breathe in'
   ls = dropnone(map(parseline, lines))
+  #ls = dropnone(pool.map(parseline, lines, totallns/16))
 #  map(lambda x: x.show(), ls)
 #  print ls
   compute_addresses(ls)
@@ -328,15 +343,32 @@ def parse(lines):
 
   return mc
 
+import argparse
 def main():
-  fname = sys.argv[1]
-  with open(fname) as fin:
-    mc = parse(fin.readlines())
+  aparser = argparse.ArgumentParser(description='Assembler for very own cpu.')
+  aparser.add_argument('-o', action='store', dest='output', metavar='FILE',
+                       help='direct output to FILE')
+  # Allow any number of additional arguments.
+  aparser.add_argument(nargs='+', action='store', dest='inputs', metavar='INPUT',
+                      help='input filenames')
+  args = aparser.parse_args()
+
+  global current_scope
+  lines = []
+  for fname in args.inputs:
+    current_scope = os.path.basename(fname).split('.')[0]
+    with open(fname) as fin:
+      lines += [".scope " + current_scope + "\n"]
+      lines += fin.readlines()
+
+  #print lines
+  mc = parse(lines)
 
   #map(lambda x: _print(bin(x)), mc)
 
-  print 'write file'
-  with open(sys.argv[1]+".out", "wb+") as fout:
+  print 'write file        '
+  oname = args.output if args.output is not None else sys.argv[1]+".out"
+  with open(oname, "wb+") as fout:
     map(lambda x: fout.write(bytearray(x)), mc)
 
 if __name__=="__main__":
