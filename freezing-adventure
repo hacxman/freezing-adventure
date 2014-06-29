@@ -83,8 +83,9 @@ class Instr(object):
   def try_addr(self, arg):
     global curln
     if arg[0] == '[' and arg[-1] == ']':
-      if arg[1:-1].isdigit():
-        return Addr(arg[1:-1])
+      n = self.try_num(arg[1:-1])
+      if n is not None:
+        return Addr(n.name)
       else:
         failwith("invalid address '%s' at line %i\n" %(arg, curln))
     else:
