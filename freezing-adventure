@@ -1,4 +1,12 @@
 #!/usr/bin/python
+
+if __name__=="__main__":
+  try:
+    import freezing_adventure
+    freezing_adventure.main()
+  except ImportError:
+    pass
+
 import os
 import sys
 import re
