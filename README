@@ -1,4 +1,9 @@
-python a.py file.asm
+to run:
+$ ./freezing-adventure file.asm
 
-wait for the output, compiler has 4 stages and its slow.
+wait for the output, compiler has 5 stages and its slow.
 enjoy
+
+
+to generate random asm file & test compiler on output run (where 100000 is line count):
+$ echo 'generating asm'; time python gen.py 100000 > random.asm ; echo 'compile' ; time ./freezing-adventure random.asm
