@@ -9,6 +9,8 @@ $ echo 'generating asm'; time python gen.py 100000 > random.asm ; echo 'compile'
 
 to use Cython compiled version:
 $ make compile
+or, to get rid of it
+$ make clean
 
 then
-$ ./c.py file.asm
+$ ./freezing-adventure file.asm
