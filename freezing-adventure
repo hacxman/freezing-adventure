@@ -69,7 +69,8 @@ class Instr(object):
   def show(self):
     print "Instr [@%s]"%str(self.addr), self.name, self.args
   def machine_length(self):
-    return 1
+    idx = self.name[0] == 'c'
+    return {'nop':1, 'mov': 2, 'ld': 4, 'st':4, 'add':2, 'sub':2}[self.name[(1*idx):]]
 
   def try_num(self, arg):
     if arg.isdigit():
@@ -150,10 +151,10 @@ class Instr(object):
       if self.args[0].__class__.__name__ == Reg.__name__:
         if self.args[1].__class__.__name__ == Reg.__name__:
           return [(self.args[0].name << 4) + 0b0010 + 0b10000000 * conditional, (self.args[1].name & 0b111) << 4]
-        elif self.args[1].__class__.__name__ == Num.__name__:
-          return [(self.args[0].name << 4) + 0b0010 + 0b10000000 * conditional, self.args[1].name]
+        elif self.args[1].__class__.__name__ in [Num.__name__, Addr.__name__]:
+          return [(self.args[0].name << 4) + 0b1110 + 0b10000000 * conditional, self.args[1].name & 0xff]
         else:
-          failwith("2st argument of mov should be register or number, not %s at line %i\n" %(self.args[1], self.line))
+          failwith("2st argument of mov should be register or number (or computed address), not %s at line %i\n" %(self.args[1], self.line))
       else:
         failwith("1st argument of mov should be register, not %s at line %i\n" %(self.args[0], self.line))
     elif self.name in ['ld', 'st']:
@@ -161,7 +162,7 @@ class Instr(object):
         failwith("ld/st has arity 2, not %i at line %i\n" %(len(self.args), self.line))
       if self.args[0].__class__.__name__ == Reg.__name__:
         if self.args[1].__class__.__name__ == Addr.__name__:
-          opcode = 0b0010 if self.name == 'ld' else 0b0100
+          opcode = 0b0011 if self.name == 'ld' else 0b0100
           opcode += 0b10000000 * conditional
           return [((self.args[0].name & 0b111) << 4) + opcode, self.args[1].name & 0xff,
               (self.args[1].name >> 8) & 0xff, (self.args[1].name >> 16) & 0xff]
@@ -287,6 +288,7 @@ def compute_addresses(ast, offset = None):
 #    print i.__class__.__name__
     if i.__class__.__name__ in [Label.__name__, Instr.__name__]:
       i.addr = addr
+      #print hex(addr), i.__class__.__name__, i.name
       addr += i.machine_length()
     else:
       failwith("can't compute address, unsupported mnemonic '%s'\ncurrent address is %i, line %i\n" % (str(i), addr, i.line))
