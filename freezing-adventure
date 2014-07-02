@@ -158,18 +158,34 @@ class Instr(object):
       else:
         failwith("1st argument of mov should be register, not %s at line %i\n" %(self.args[0], self.line))
     elif self.name in ['ld', 'st']:
-      if len(self.args) != 2:
-        failwith("ld/st has arity 2, not %i at line %i\n" %(len(self.args), self.line))
-      if self.args[0].__class__.__name__ == Reg.__name__:
-        if self.args[1].__class__.__name__ == Addr.__name__:
-          opcode = 0b0011 if self.name == 'ld' else 0b0100
-          opcode += 0b10000000 * conditional
-          return [((self.args[0].name & 0b111) << 4) + opcode, self.args[1].name & 0xff,
-              (self.args[1].name >> 8) & 0xff, (self.args[1].name >> 16) & 0xff]
+      if len(self.args) == 2:
+        if self.args[0].__class__.__name__ == Reg.__name__:
+          if self.args[1].__class__.__name__ == Addr.__name__:
+            opcode = 0b0011 if self.name == 'ld' else 0b0100
+            opcode += 0b10000000 * conditional
+            return [((self.args[0].name & 0b111) << 4) + opcode, self.args[1].name & 0xff,
+                (self.args[1].name >> 8) & 0xff, (self.args[1].name >> 16) & 0xff]
+          else:
+            failwith("2st argument of ld/st should be address, not %s at line %i\n" %(self.args[1], self.line))
         else:
-          failwith("2st argument of ld/st should be address, not %s at line %i\n" %(self.args[1], self.line))
+          failwith("1st argument of mov should be register, not %s at line %i\n" %(self.args[0], self.line))
+      elif len(self.args) == 3:
+        if self.args[0].__class__.__name__ == Reg.__name__:
+          if self.args[1].__class__.__name__ == Reg.__name__:
+            if self.args[2].__class__.__name__ == Reg.__name__:
+              opcode = 0b1011 if self.name == 'ld' else 0b1100
+              opcode += 0b10000000 * conditional
+              return [((self.args[0].name & 0b111) << 4) + opcode, (self.args[1].name & 0b0111) << 4 +
+                  self.args[1].name & 0b0111]
+            else:
+              failwith("3st argument of mov should be register, not %s at line %i\n" %(self.args[0], self.line))
+          else:
+            failwith("2st argument of mov should be register, not %s at line %i\n" %(self.args[0], self.line))
+        else:
+          failwith("1st argument of mov should be register, not %s at line %i\n" %(self.args[0], self.line))
+
       else:
-        failwith("1st argument of mov should be register, not %s at line %i\n" %(self.args[0], self.line))
+        failwith("ld/st has arity 2 or 3, not %i at line %i\n" %(len(self.args), self.line))
     elif self.name in ['add', 'sub']:
       if len(self.args) != 3:
         failwith("add/sub has arity 3, not %i at line %i\n" %(len(self.args), self.line))
