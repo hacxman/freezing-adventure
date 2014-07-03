@@ -70,7 +70,7 @@ class Instr(object):
     print "Instr [@%s]"%str(self.addr), self.name, self.args
   def machine_length(self):
     idx = self.name[0] == 'c'
-    return {'nop':1, 'mov': 2, 'ld': 4, 'st':4, 'add':2, 'sub':2}[self.name[(1*idx):]]
+    return {'nop':1, 'mov': 2, 'ld': 4 if len(self.args) == 2 else 2, 'st':4 if len(self.args) == 2 else 2, 'add':2, 'sub':2}[self.name[(1*idx):]]
 
   def try_num(self, arg):
     if arg.isdigit():
