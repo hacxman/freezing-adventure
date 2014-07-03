@@ -15,9 +15,20 @@ def geni():
     elif r >= 0.1 and r < 0.2:
       l = lb[random.randrange(0, len(lb))]
       print "ld %%%i" % r0, l
-    elif r >= 0.2 and r < 0.4:
+    elif r >= 0.2 and r < 0.266:
       l = lb[random.randrange(0, len(lb))]
       print "st %%%i" % r0, l
+    elif r >= 0.266 and r < 0.33:
+      r1 = random.randrange(0, 8)
+      r2 = random.randrange(0, 8)
+      #l = lb[random.randrange(0, len(lb))]
+      print "ld %{} %{} %{}".format(r0,r1,r2)
+    elif r >= 0.33 and r < 0.4:
+      r1 = random.randrange(0, 8)
+      r2 = random.randrange(0, 8)
+      #l = lb[random.randrange(0, len(lb))]
+      print "st %{} %{} %{}".format(r0,r1,r2)
+      #print "st %%%i" % r0, l
     elif r >= 0.4 and r < 0.6:
       r1 = random.randrange(0, 8)
       print "mov %%%i %%%i" % (r0, r1)
